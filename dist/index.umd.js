@@ -2,7 +2,7 @@
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
   (global = global || self, global.VueInputAutowidth = factory());
-}(this, function () { 'use strict';
+}(this, (function () { 'use strict';
 
   /**
    * Code refactored from Mozilla Developer Network:
@@ -80,7 +80,7 @@
   }
 
   var directive = {
-    bind: function bind(el) {
+    beforeMount: function beforeMount(el) {
       if (el.tagName.toLocaleUpperCase() !== "INPUT") {
         throw new Error("v-input-autowidth can only be used on input elements.");
       }
@@ -88,9 +88,12 @@
       el.dataset.uuid = Math.random().toString(36).slice(-5);
       el.style.boxSizing = "content-box";
     },
-    inserted: function inserted(el, binding) {
+    mounted: function mounted(el, binding, vnode) {
+      var hasVModel = vnode.data.directives.some(function (directive) {
+        return directive.name === "model";
+      });
       var styles = window.getComputedStyle(el);
-      el.mirror = document.createElement("span");
+      el.mirror = document.createElement("div");
       Object.assign(el.mirror.style, {
         position: "absolute",
         top: "0",
@@ -110,12 +113,18 @@
       el.mirror.setAttribute("aria-hidden", "true");
       document.body.appendChild(el.mirror);
       checkWidth(el, binding);
+      console.log('hasVModel', hasVModel);
+
+      if (!hasVModel) {
+        el.addEventListener("input", checkWidth.bind(null, el, binding));
+      }
     },
-    componentUpdated: function componentUpdated(el, binding) {
+    updated: function updated(el, binding) {
       checkWidth(el, binding);
     },
-    unbind: function unbind(el) {
+    unmounted: function unmounted(el) {
       document.body.removeChild(el.mirror);
+      el.removeEventListener("input", checkWidth.bind(null, el, binding));
     }
   };
 
@@ -131,4 +140,4 @@
 
   return directive;
 
-}));
+})));
